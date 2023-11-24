@@ -1,7 +1,7 @@
 """Blogly application."""
 
 from flask import Flask, render_template, request, redirect
-from models import db, connect_db, User
+from models import db, connect_db, User, Post
 
 from flask_debugtoolbar import DebugToolbarExtension
 
@@ -19,10 +19,9 @@ toolbar = DebugToolbarExtension(app)
 connect_db(app)
 
 #ctx = app.app_context()
-
 #ctx.push()
 
-db.drop_all()
+#db.drop_all()
 db.create_all()
 
 @app.route('/')
@@ -49,7 +48,6 @@ def addUser():
     	last_name = request.form['last_name'],
     	image_url = request.form['user_img'] or None
     )
-    ####################################################
 
     db.session.add(newUser)
     db.session.commit()
@@ -86,6 +84,63 @@ def deleteUser(userID):
     """ """
     user = User.query.get(userID)
     db.session.delete(user)
+    db.session.commit()
+
+    return redirect("/users")
+
+
+
+@app.route('/users/<userID>/posts/new')
+def showPosting(userID):
+    """Show posting form"""
+    user = User.query.get(userID)
+
+    return render_template('new_post.html', user=user)
+
+@app.route('/users/<userID>/posts/new', methods=["POST"])
+def addPost(userID):
+    """Handle post adding"""
+    user = User.query.get(userID)
+    newPost = Post(
+    	title = request.form['title'],
+    	content = request.form['content'],
+    	user_id = userID
+    )
+
+    db.session.add(newPost)
+    db.session.commit()
+
+    return redirect(f"/users/{userID}")
+
+@app.route('/posts/<postID>')
+def showPost(postID):
+    """ """
+    post = Post.query.get(postID)
+    return render_template('post.html', post=post)
+
+@app.route('/posts/<postID>/edit')
+def showPostEdit(postID):
+    """ """
+    post = Post.query.get(postID)
+    return render_template('edit_post.html', post=post)
+
+@app.route('/posts/<postID>/edit', methods=["POST"])
+def updatePost(postID):
+    """ """
+    post = Post.query.get(postID)
+    post.title = request.form['title']
+    post.content = request.form['content']
+
+    db.session.add(post)
+    db.session.commit()
+
+    return redirect(f"/posts/{postID}")
+
+@app.route('/posts/<postID>/delete', methods=["POST"])
+def deletePost(postID):
+    """ """
+    post = Post.query.get(postID)
+    db.session.delete(post)
     db.session.commit()
 
     return redirect("/users")

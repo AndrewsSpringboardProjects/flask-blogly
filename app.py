@@ -1,7 +1,7 @@
 """Blogly application."""
 
 from flask import Flask, render_template, request, redirect
-from models import db, connect_db, User, Post
+from models import db, connect_db, User, Post, Tag, PostTag
 
 from flask_debugtoolbar import DebugToolbarExtension
 
@@ -94,17 +94,21 @@ def deleteUser(userID):
 def showPosting(userID):
     """Show posting form"""
     user = User.query.get(userID)
+    tags = Tag.query.all()
 
-    return render_template('new_post.html', user=user)
+    return render_template('new_post.html', user=user, tags=tags)
 
 @app.route('/users/<userID>/posts/new', methods=["POST"])
 def addPost(userID):
     """Handle post adding"""
     user = User.query.get(userID)
+    tagIDS = [int(num) for num in request.form.getlist("tags")]
+    tags = Tag.query.filter(Tag.id.in_(tagIDS)).all()
     newPost = Post(
     	title = request.form['title'],
     	content = request.form['content'],
-    	user_id = userID
+    	user_id = userID,
+        tags=tags
     )
 
     db.session.add(newPost)
@@ -122,7 +126,8 @@ def showPost(postID):
 def showPostEdit(postID):
     """ """
     post = Post.query.get(postID)
-    return render_template('edit_post.html', post=post)
+    tags = Tag.query.all()
+    return render_template('edit_post.html', post=post, tags=tags)
 
 @app.route('/posts/<postID>/edit', methods=["POST"])
 def updatePost(postID):
@@ -130,6 +135,9 @@ def updatePost(postID):
     post = Post.query.get(postID)
     post.title = request.form['title']
     post.content = request.form['content']
+
+    tagIDS = [int(num) for num in request.form.getlist("tags")]
+    post.tags = Tag.query.filter(Tag.id.in_(tagIDS)).all()
 
     db.session.add(post)
     db.session.commit()
@@ -144,3 +152,73 @@ def deletePost(postID):
     db.session.commit()
 
     return redirect("/users")
+
+
+
+@app.route('/tags')
+def showAllTags():
+
+    tags = Tag.query.all()
+    return render_template('all_tags.html', tags=tags)
+
+@app.route('/tags/<tagID>')
+def showTag(tagID):
+
+    tag = Tag.query.get(tagID)
+    return render_template('show_tag.html', tag=tag)
+
+@app.route('/tags/new')
+def showAddTag():
+
+    posts = Post.query.all()
+    return render_template('new_tag.html', posts=posts)
+
+@app.route('/tags/new', methods=["POST"])
+def addTag():
+
+    """
+    user = User.query.get(userID)
+    newPost = Post(
+        title = request.form['title'],
+        content = request.form['content'],
+        user_id = userID
+    )
+
+    posts = Post.query.filter(Post.id.in_).all()
+    """
+
+    tag = Tag(
+        name=request.form['name'],
+    )
+
+    db.session.add(tag)
+    db.session.commit()
+
+    return redirect('/tags')
+
+@app.route('/tags/<tagID>/edit')
+def showEditTag(tagID):
+
+    tag = Tag.query.get(tagID)
+    posts = Post.query.all()
+    return render_template('edit_tag.html', tag=tag, posts=posts)
+
+@app.route('/tags/<tagID>/edit', methods=["POST"])
+def editTag(tagID):
+
+    tag = Tag.query.get(tagID)
+    tag.name = request.form['name']
+
+    db.session.add(tag)
+    db.session.commit()
+
+    return redirect('/tags')
+
+@app.route('/tags/<tagID>/delete', methods=["POST"])
+def deleteTag(tagID):
+
+    tag = Tag.query.get(tagID)
+    db.session.delete(tag)
+    db.session.commit()
+
+    return redirect('/tags')
